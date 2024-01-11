@@ -1,0 +1,9 @@
+{
+  "packages": [
+    "nodePackages.pnpm@latest",
+    "nodejs@20.10.0"
+  ],
+  "env": {
+    "OPENAI_API_KEY": "sess-Txmx6HAnIc2zh0L8GXHcDAm5V8de3rbIgGXIU2s4"
+  }
+}
