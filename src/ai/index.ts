@@ -3,6 +3,9 @@ import { HttpsProxyAgent } from "https-proxy-agent";
 import formidable from "formidable";
 import * as R from "ramda";
 import fs from "fs/promises";
+import tiktoken from "tiktoken";
+
+let encoding = tiktoken.get_encoding("cl100k_base");
 
 const httpAgent = R.pipe(
   () => process.env.http_proxy ?? process.env.HTTP_PROXY,
@@ -32,12 +35,16 @@ export const stt = async (formidableFile: formidable.File) => {
 };
 
 export const genChoices = async (ques: string) => {
+  const sysContent =
+    "you are a good ai chat bot. if you understand the message, ask one question or answer user's question from different dimensions.";
+  encoding = tiktoken.encoding_for_model("gpt-3.5-turbo");
+  const sysToken = encoding.encode(sysContent);
+  const quesToken = encoding.encode(ques);
   const res = await openai.chat.completions.create({
     messages: [
       {
         role: "system",
-        content:
-          "you are a good ai chat bot. if you understand the message, ask one question or answer user's question from different dimensions.",
+        content: sysContent,
         name: "setting",
       },
       {
@@ -48,5 +55,20 @@ export const genChoices = async (ques: string) => {
     model: "gpt-3.5-turbo",
     n: 4,
   });
-  return res.choices.map((choice) => choice.message.content);
+  const choices = res.choices.map((choice) => choice.message.content);
+  const choicesToken = encoding.encode(choices.join("\n"));
+  console.log("sysToken length",sysToken.length);
+  console.log("quesToken length",quesToken.length);
+  console.log("choicesToken length",choicesToken.length);
+  return choices;
+};
+
+export const tts = async (text: string) => {
+  const res = await openai.audio.speech.create({
+    model: "tts-1",
+    input: text,
+    voice: "nova",
+  });
+  const buffer = await res.arrayBuffer();
+  return buffer;
 };
