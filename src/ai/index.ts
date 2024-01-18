@@ -4,6 +4,7 @@ import formidable from "formidable";
 import * as R from "ramda";
 import fs from "fs/promises";
 import tiktoken from "tiktoken";
+import defaultPrompt from "./defaultPrompt";
 
 let encoding = tiktoken.get_encoding("cl100k_base");
 
@@ -34,9 +35,9 @@ export const stt = async (formidableFile: formidable.File) => {
   return res.text;
 };
 
-export const genChoices = async (ques: string) => {
-  const sysContent =
-    "you are a good ai chat bot. if you understand the message, ask one question or answer user's question from different dimensions.";
+
+export const genChoices = async (ques: string, prompt?: string) => {
+  const sysContent = prompt ?? defaultPrompt;
   encoding = tiktoken.encoding_for_model("gpt-3.5-turbo");
   const sysToken = encoding.encode(sysContent);
   const quesToken = encoding.encode(ques);
@@ -49,7 +50,8 @@ export const genChoices = async (ques: string) => {
       },
       {
         role: "user",
-        content: ques,
+        content: `THE_VOICE_INPUT_TEXT: ${ques}`,
+        name: "Jimmy",
       },
     ],
     model: "gpt-3.5-turbo",
@@ -57,9 +59,9 @@ export const genChoices = async (ques: string) => {
   });
   const choices = res.choices.map((choice) => choice.message.content);
   const choicesToken = encoding.encode(choices.join("\n"));
-  console.log("sysToken length",sysToken.length);
-  console.log("quesToken length",quesToken.length);
-  console.log("choicesToken length",choicesToken.length);
+  console.log("sysToken length", sysToken.length);
+  console.log("quesToken length", quesToken.length);
+  console.log("choicesToken length", choicesToken.length);
   return choices;
 };
 

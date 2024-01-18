@@ -1,17 +1,22 @@
 import * as R from "ramda";
-import { useContext } from "react";
 import { AudioRecorder, useAudioRecorder } from "react-audio-voice-recorder";
-import { ResponseData } from "@/pages/api/send-audio";
+import { ResponseData } from "@/pages/api/stt";
 
 type PropsType = {
-  onAIResponse: (choices: string[] | undefined) => void;
+  onAIResponse: (text?: string) => void;
+  startWaiting?: () => void;
+  finishWaiting?: () => void;
 };
 
-export default function Audio({ onAIResponse }: PropsType) {
+export default function Audio({
+  onAIResponse,
+  startWaiting,
+  finishWaiting,
+}: PropsType) {
   const AudioRecorderController = useAudioRecorder();
   return (
     <main>
-      <div className="flex flex-col items-center justify-center h-32">
+      <div className="flex flex-col items-center justify-center py-56">
         <AudioRecorder
           showVisualizer={true}
           onRecordingComplete={async (blob) => {
@@ -20,13 +25,21 @@ export default function Audio({ onAIResponse }: PropsType) {
             });
             const formData = new FormData();
             formData.append("file", file);
-            const res: ResponseData = await (
-              await fetch("/api/send-audio", {
-                method: "POST",
-                body: formData,
-              })
-            ).json();
-            onAIResponse(res.choices);
+            startWaiting?.();
+            try {
+              const res: ResponseData = await (
+                await fetch("/api/stt", {
+                  method: "POST",
+                  body: formData,
+                })
+              ).json();
+              finishWaiting?.();
+              onAIResponse(res.text);
+            } catch (error) {
+              console.error(error);
+              finishWaiting?.();
+              onAIResponse();
+            }
           }}
           audioTrackConstraints={{
             noiseSuppression: true,
@@ -38,7 +51,7 @@ export default function Audio({ onAIResponse }: PropsType) {
       </div>
       <div className="flex flex-col items-center justify-center">
         <div className="relative lg:min-w-[768px] sm:min-w-[512px] min-w-[256px] h-12">
-          <div className="text-2xl text-gray-500 absolute inset-0 flex flex-col items-center justify-center">
+          <div className="text-2xl absolute inset-0 flex flex-col items-center justify-center">
             {R.cond([
               [
                 ({ isRecording }: typeof AudioRecorderController) =>
@@ -48,7 +61,10 @@ export default function Audio({ onAIResponse }: PropsType) {
               [
                 ({ isRecording, isPaused }) => isRecording && !isPaused,
                 () => (
-                  <>Recording in progress, click the button to stop recording</>
+                  <>
+                    Recording in progress, click the stop button to stop
+                    recording, save button to send.
+                  </>
                 ),
               ],
               [
